@@ -4,14 +4,16 @@ from fer import FER
 
 detector = FER(mtcnn=True)
 
-# Cache state
-_last_bbox = None          # (x, y, w, h) of last detected face
+_last_bbox = None
 _frame_counter = 0
-DETECT_EVERY_N = 5         # run full MTCNN detection only every 5 frames
+_last_emotion = "neutral"
+_last_conf = 0.0
+DETECT_EVERY_N = 5
+MIN_CONFIDENCE = 0.35  # ignore detections below this
 
 
 def detect_face_emotion(frame: np.ndarray):
-    global _last_bbox, _frame_counter
+    global _last_bbox, _frame_counter, _last_emotion, _last_conf
     _frame_counter += 1
 
     run_full_detect = (_frame_counter % DETECT_EVERY_N == 0) or (_last_bbox is None)
@@ -20,32 +22,39 @@ def detect_face_emotion(frame: np.ndarray):
         result = detector.detect_emotions(frame)
         if not result:
             _last_bbox = None
-            return "neutral", 0.0
+            return _last_emotion, _last_conf  # return last known instead of neutral
 
         face = result[0]
-        _last_bbox = face["box"]          # cache it
+        _last_bbox = face["box"]
         emotions = face["emotions"]
     else:
-        # Fast path: crop from cached bbox, run only the classifier (no MTCNN)
         if _last_bbox is None:
-            return "neutral", 0.0
+            return _last_emotion, _last_conf
 
         x, y, w, h = _last_bbox
-        # Add a small padding to handle slight head movement
         pad = 20
-        x1, y1 = max(0, x - pad), max(0, y - pad)
-        x2, y2 = min(frame.shape[1], x + w + pad), min(frame.shape[0], y + h + pad)
+        x1 = max(0, x - pad)
+        y1 = max(0, y - pad)
+        x2 = min(frame.shape[1], x + w + pad)
+        y2 = min(frame.shape[0], y + h + pad)
         crop = frame[y1:y2, x1:x2]
 
         if crop.size == 0:
             _last_bbox = None
-            return "neutral", 0.0
+            return _last_emotion, _last_conf
 
         result = detector.detect_emotions(crop)
         if not result:
-            return "neutral", 0.0
+            return _last_emotion, _last_conf
         emotions = result[0]["emotions"]
 
     emotion = max(emotions, key=emotions.get)
     confidence = emotions[emotion]
-    return emotion, round(confidence, 3)
+
+    # Ignore low confidence — keep last result instead
+    if confidence < MIN_CONFIDENCE:
+        return _last_emotion, _last_conf
+
+    _last_emotion = emotion
+    _last_conf = round(confidence, 3)
+    return _last_emotion, _last_conf

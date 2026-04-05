@@ -2,24 +2,19 @@ import sounddevice as sd
 import numpy as np
 
 SAMPLE_RATE = 16000
-DURATION = 2
+DURATION = 1.5  # reduced from 2s — faster response
 
-# ✅ Use Airdopes mic
-sd.default.device = 1
-
+sd.default.device = 14
 
 def record_audio():
-    print("🎤 Recording audio...")
-
-    audio = sd.rec(int(DURATION * SAMPLE_RATE),
-                   samplerate=SAMPLE_RATE,
-                   channels=1)
-
+    audio = sd.rec(
+        int(DURATION * SAMPLE_RATE),
+        samplerate=SAMPLE_RATE,
+        channels=1,
+        dtype="float32"
+    )
     sd.wait()
-
     audio = np.squeeze(audio)
-
     energy = np.mean(np.abs(audio))
-    print("Audio Energy:", energy)
-
+    print(f"Audio Energy: {energy:.5f}")
     return audio
