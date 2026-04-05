@@ -1,0 +1,7 @@
+opencv-python
+fer
+torch
+librosa
+numpy
+sounddevice
+scipy
