@@ -1,16 +1,35 @@
+import os
+import sys
 import numpy as np
 import torch
+from unittest.mock import MagicMock
+
+# -------- ENVIRONMENT FLAGS (must be first) --------
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"]       = "1"
+os.environ["HUGGINGFACE_HUB_VERBOSITY"]              = "error"
+os.environ["HF_HUB_LOCAL_DIR_AUTO_SYMLINK_THRESHOLD"] = "0"
+
+# -------- MOCK BROKEN OPTIONAL DEPS --------
+for mod in [
+    "k2",
+    "flair",
+    "flair.embeddings",
+    "speechbrain.integrations.k2_fsa",
+    "speechbrain.integrations.nlp",
+    "speechbrain.integrations.nlp.flair_embeddings",
+    "speechbrain.integrations.huggingface.wordemb",
+]:
+    sys.modules[mod] = MagicMock()
 
 # -------- SPEECHBRAIN SETUP --------
-import sys
-from unittest.mock import MagicMock
-sys.modules["k2"] = MagicMock()
-
 try:
     from speechbrain.inference.classifiers import EncoderClassifier
+    from speechbrain.utils.fetching import LocalStrategy
+
     _sb_model = EncoderClassifier.from_hparams(
         source="speechbrain/emotion-recognition-wav2vec2-IEMOCAP",
-        savedir="pretrained_models/emotion"
+        savedir="pretrained_models/emotion",
+        local_strategy=LocalStrategy.COPY,
     )
     USE_SPEECHBRAIN = True
     print("SpeechBrain loaded successfully")
@@ -18,6 +37,8 @@ except Exception as e:
     USE_SPEECHBRAIN = False
     print(f"SpeechBrain not available ({e}), using numpy fallback")
 
+# ... everything else below stays exactly the same
+# ... rest of file unchanged
 EMOTIONS_MAP = {
     "neu": "neutral",
     "hap": "happy",

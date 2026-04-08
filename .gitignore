@@ -91,3 +91,8 @@ models/
 *.mp3
 *.mp4
 *.avi
+# Project specific checkpoints and models
+wav2vec2_checkpoints/
+pretrained_models/
+*.ckpt
+*.safetensors
