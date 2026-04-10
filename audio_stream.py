@@ -6,7 +6,7 @@ import webrtcvad
 import collections
 
 SAMPLE_RATE  = 16000
-sd.default.device = 1
+sd.default.device = 14
 
 print("Loading Whisper model...")
 _whisper_model = whisper.load_model("small")
